@@ -588,26 +588,131 @@
 
   function refreshAdminList() {
     const list = $("#admin-work-list");
-    // Hanya tampilkan karya milik user yang login
+    if (!list) return;
     const mine = currentUser ? cloudItems.filter((x) => x.owner_id === currentUser.id) : cloudItems;
     list.innerHTML = mine.length
-      ? mine.map((item) => `<li><img src="${esc(publicImageUrl(item.image_path))}" alt=""><span>${esc(item.title)}</span><button type="button" data-delete="${esc(item.id)}">Hapus</button></li>`).join("")
-      : "<li>Belum ada karya. Upload karya pertamamu!</li>";
+      ? mine.map((item) => `
+        <li>
+          <img src="${esc(publicImageUrl(item.image_path))}" alt="">
+          <span>${esc(item.title)} <small style="color:var(--muted,#64748b); font-weight:normal;">(${esc(item.category)})</small></span>
+          <div class="item-actions">
+            <button type="button" class="btn-edit" data-edit="${esc(item.id)}" title="Edit keterangan karya ini">✏️ Edit</button>
+            <button type="button" class="btn-delete" data-delete="${esc(item.id)}" title="Hapus karya ini">🗑️ Hapus</button>
+          </div>
+        </li>
+      `).join("")
+      : "<li>Belum ada karya online. Upload karya pertamamu di atas!</li>";
+
+    $$("[data-edit]", list).forEach((btn) => btn.addEventListener("click", () => startEditWork(btn.dataset.edit)));
     $$("[data-delete]", list).forEach((btn) => btn.addEventListener("click", () => deleteCloudItem(btn.dataset.delete)));
   }
 
-  async function deleteCloudItem(id) {
-    if (!confirm("Hapus karya ini?")) return;
+  function startEditWork(id) {
     const item = cloudItems.find((x) => x.id === id);
-    const hdr  = { ...apiHeaders, Authorization: `Bearer ${adminToken}` };
+    if (!item) return;
+
+    // Pastikan berada di tab kelola karya
+    switchAdminTab("works");
+
+    const editIdInput = $("#edit-work-id");
+    const titleInput  = $("#work-title");
+    const descInput   = $("#work-desc");
+    const catInput    = $("#work-category");
+    const tagsInput   = $("#work-tags");
+    const demoInput   = $("#work-demo");
+    const imgLabel    = $("#work-image-label");
+    const imgInput    = $("#work-image-input");
+    const submitBtn   = $("#work-submit-btn");
+    const cancelBtn   = $("#work-cancel-edit-btn");
+    const formTitle   = $("#admin-work-form-title");
+    const formDesc    = $("#admin-work-form-desc");
+
+    if (editIdInput) editIdInput.value = item.id;
+    if (titleInput)  titleInput.value  = item.title;
+    if (descInput)   descInput.value   = item.desc || item.description || "";
+    if (catInput)    catInput.value    = item.category;
+    if (tagsInput)   tagsInput.value   = Array.isArray(item.tags) ? item.tags.join(", ") : "";
+    if (demoInput)   demoInput.value   = item.demo && item.demo !== "#" ? item.demo : "";
+
+    if (imgLabel)    imgLabel.textContent = "Ganti gambar (opsional, biarkan kosong jika foto tidak diubah)";
+    if (imgInput)    imgInput.required    = false;
+    if (submitBtn)   submitBtn.textContent = "Simpan Perubahan";
+    if (cancelBtn)   cancelBtn.style.display = "inline-block";
+    if (formTitle)   formTitle.textContent = `Edit Karya: ${item.title}`;
+    if (formDesc)    formDesc.textContent  = "Ubah judul, keterangan, kategori, link, atau ganti foto karya.";
+
+    const form = $("#admin-work-form");
+    if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function cancelEditWork() {
+    const form        = $("#admin-work-form");
+    if (form) form.reset();
+    const editIdInput = $("#edit-work-id");
+    const imgLabel    = $("#work-image-label");
+    const imgInput    = $("#work-image-input");
+    const submitBtn   = $("#work-submit-btn");
+    const cancelBtn   = $("#work-cancel-edit-btn");
+    const formTitle   = $("#admin-work-form-title");
+    const formDesc    = $("#admin-work-form-desc");
+    const statusEl    = $("#admin-save-status");
+
+    if (editIdInput) editIdInput.value = "";
+    if (imgLabel)    imgLabel.textContent = "Gambar karya";
+    if (imgInput)    imgInput.required = true;
+    if (submitBtn)   submitBtn.textContent = "Simpan karya";
+    if (cancelBtn)   cancelBtn.style.display = "none";
+    if (formTitle)   formTitle.textContent = "Tambah karya baru";
+    if (formDesc)    formDesc.textContent = "Upload gambar karya (JPG, PNG, WebP, GIF). Maksimal 50MB.";
+    if (statusEl)    statusEl.textContent = "";
+  }
+
+  async function deleteCloudItem(id) {
+    const item = cloudItems.find((x) => x.id === id);
+    const itemTitle = item ? `"${item.title}"` : "karya ini";
+    if (!confirm(`Hapus ${itemTitle} dari portofolio? Foto dan data akan dihapus permanen.`)) return;
+    const hdr = { ...apiHeaders, Authorization: `Bearer ${adminToken}` };
     try {
       const res = await fetch(`${SUPABASE.url}/rest/v1/portfolio_items?id=eq.${encodeURIComponent(id)}`, { method: "DELETE", headers: hdr });
       if (!res.ok) return toast(`Gagal hapus: ${await responseError(res, "izin ditolak")}`);
-      if (item) fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${item.image_path}`, { method: "DELETE", headers: hdr }).catch(() => {});
+      if (item && item.image_path) {
+        fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${item.image_path}`, { method: "DELETE", headers: hdr }).catch(() => {});
+      }
     } catch (err) { return toast(`Gagal hapus: ${err.message}`); }
+
     cloudItems = cloudItems.filter((x) => x.id !== id);
-    refreshAdminList(); refreshPublicPortfolio();
-    toast("Karya dihapus.");
+    const editIdInput = $("#edit-work-id");
+    if (editIdInput && editIdInput.value === id) cancelEditWork();
+    refreshAdminList();
+    refreshPublicPortfolio();
+    toast("✅ Karya dan foto berhasil dihapus.");
+  }
+
+  function switchAdminTab(tab) {
+    const isWorks = tab === "works";
+    const worksSection   = $("#admin-tab-works");
+    const profileSection = $("#admin-tab-profile");
+    const btnWorks       = $("#tab-btn-works");
+    const btnProfile     = $("#tab-btn-profile");
+
+    if (worksSection)   worksSection.style.display   = isWorks ? "block" : "none";
+    if (profileSection) profileSection.style.display = isWorks ? "none"  : "block";
+
+    if (isWorks) {
+      if (btnWorks)   { btnWorks.style.background = ""; btnWorks.style.border = "none"; }
+      if (btnProfile) { btnProfile.style.background = "transparent"; btnProfile.style.border = "1px solid #cbd5e1"; }
+    } else {
+      if (btnProfile) { btnProfile.style.background = ""; btnProfile.style.border = "none"; }
+      if (btnWorks)   { btnWorks.style.background = "transparent"; btnWorks.style.border = "1px solid #cbd5e1"; }
+
+      // Isi form profil dengan data terkini
+      const nameInp = $("#profile-name");
+      const bioInp  = $("#profile-bio");
+      const cvInp   = $("#profile-cv");
+      if (nameInp) nameInp.value = SITE.name || "";
+      if (bioInp)  bioInp.value  = SITE.bio || "";
+      if (cvInp)   cvInp.value   = SITE.cvUrl && SITE.cvUrl !== "#" ? SITE.cvUrl : "";
+    }
   }
 
   function initAdmin() {
@@ -620,6 +725,16 @@
     $("#admin-close").addEventListener("click", () => dialog.close());
     dialog.addEventListener("click", (e) => e.target === dialog && dialog.close());
 
+    // Tab navigasi admin
+    const btnWorks   = $("#tab-btn-works");
+    const btnProfile = $("#tab-btn-profile");
+    if (btnWorks)   btnWorks.addEventListener("click", () => switchAdminTab("works"));
+    if (btnProfile) btnProfile.addEventListener("click", () => switchAdminTab("profile"));
+
+    // Tombol Batal Edit
+    const cancelEditBtn = $("#work-cancel-edit-btn");
+    if (cancelEditBtn) cancelEditBtn.addEventListener("click", cancelEditWork);
+
     const showDashboard = (user) => {
       currentUser = user;
       const nameEl = $("#admin-username-display");
@@ -627,6 +742,7 @@
       $("#admin-login").hidden     = true;
       $("#admin-dashboard").hidden = false;
       setSaveStatus("");
+      switchAdminTab("works");
       refreshAdminList();
     };
 
@@ -669,11 +785,11 @@
         sessionStorage.setItem("portfolio-admin-token", adminToken);
         setLoginStatus("");
         showDashboard(data.user);
-        toast("Berhasil masuk. Silakan upload karyamu!");
+        toast("Berhasil masuk.");
       } catch (err) {
         console.error("[Login]", err);
         setLoginStatus(`Koneksi gagal: ${err.message}`);
-        toast("Koneksi Supabase gagal. Cek konsol (F12).");
+        toast("Koneksi Supabase gagal.");
       }
     });
 
@@ -687,82 +803,234 @@
       setLoginStatus("Berhasil keluar.");
     });
 
-    // SIMPAN KARYA
+    // SIMPAN / UPDATE KARYA
     $("#admin-work-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const form     = e.currentTarget;
       const data     = new FormData(form);
+      const editId   = $("#edit-work-id").value;
       const title    = String(data.get("title")    || "").trim();
       const desc     = String(data.get("desc")     || "").trim();
       const category = String(data.get("category") || "").trim();
       const file     = data.get("image");
 
-      if (!title)                                return setSaveStatus("Judul karya tidak boleh kosong.");
-      if (!desc)                                 return setSaveStatus("Deskripsi tidak boleh kosong.");
-      if (!category)                             return setSaveStatus("Pilih kategori karya.");
-      if (!(file instanceof File) || !file.size) return setSaveStatus("Pilih gambar karya dulu.");
-      if (file.size > 5 * 1024 * 1024)          return setSaveStatus("Ukuran gambar maksimal 5MB.");
-      if (!adminToken || !currentUser)           return setSaveStatus("Sesi habis. Tutup dan login ulang.");
+      if (!title)                      return setSaveStatus("Judul karya tidak boleh kosong.");
+      if (!desc)                       return setSaveStatus("Deskripsi tidak boleh kosong.");
+      if (!category)                   return setSaveStatus("Pilih kategori karya.");
+      if (!editId && (!(file instanceof File) || !file.size)) return setSaveStatus("Pilih gambar karya dulu.");
+      if (file && file.size > 50 * 1024 * 1024) return setSaveStatus("Ukuran gambar maksimal 50MB.");
+      if (!adminToken || !currentUser) return setSaveStatus("Sesi habis. Tutup dan login ulang.");
 
-      const submitBtn        = $('button[type="submit"]', form);
-      submitBtn.disabled     = true;
-      submitBtn.textContent  = "Menyimpan...";
+      const submitBtn = $("#work-submit-btn");
+      submitBtn.disabled = true;
+      submitBtn.textContent = editId ? "Memperbarui..." : "Menyimpan...";
 
-      const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
-      const imgPath  = `${currentUser.id}/${Date.now()}-${safeName}`;
-      const authHdr  = { ...apiHeaders, Authorization: `Bearer ${adminToken}` };
+      const authHdr = { ...apiHeaders, Authorization: `Bearer ${adminToken}` };
 
       try {
-        setSaveStatus("Mengunggah gambar...");
-        const upRes = await fetch(
-          `${SUPABASE.url}/storage/v1/object/portfolio-assets/${imgPath}`,
-          { method: "POST", headers: { ...authHdr, "Content-Type": file.type, "x-upsert": "false" }, body: file, signal: AbortSignal.timeout(30000) }
-        );
-        if (!upRes.ok) {
-          const msg = await responseError(upRes, "izin storage ditolak");
-          throw new Error(`Upload gambar gagal: ${msg}`);
-        }
+        if (editId) {
+          // ==================== MODE EDIT KARYA ====================
+          const existingItem = cloudItems.find((x) => x.id === editId);
+          let imgPath = existingItem ? existingItem.image_path : "";
 
-        setSaveStatus("Menyimpan data...");
-        const record = {
-          title, description: desc, category, image_path: imgPath,
-          tags:     String(data.get("tags") || "").split(",").map((t) => t.trim()).filter(Boolean),
-          demo_url: String(data.get("demo") || "").trim() || null,
-          position: 0
-        };
-        const dbRes = await fetch(`${SUPABASE.url}/rest/v1/portfolio_items`, {
-          method: "POST",
-          headers: { ...authHdr, "Content-Type": "application/json", Prefer: "return=representation" },
-          body: JSON.stringify(record),
-          signal: AbortSignal.timeout(12000)
-        });
-        if (!dbRes.ok) {
-          fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${imgPath}`, { method: "DELETE", headers: authHdr }).catch(() => {});
-          const msg = await responseError(dbRes, "izin tabel ditolak");
-          throw new Error(`Simpan data gagal: ${msg}`);
+          // Jika ada file gambar baru dipilih saat edit
+          if (file instanceof File && file.size > 0) {
+            setSaveStatus("Mengunggah gambar baru...");
+            const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
+            const newPath  = `${currentUser.id}/${Date.now()}-${safeName}`;
+            const upRes = await fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${newPath}`, {
+              method: "POST", headers: { ...authHdr, "Content-Type": file.type, "x-upsert": "false" }, body: file, signal: AbortSignal.timeout(30000)
+            });
+            if (!upRes.ok) throw new Error(`Upload gambar baru gagal: ${await responseError(upRes, "izin storage ditolak")}`);
+            
+            // Hapus gambar lama jika ada
+            if (imgPath) fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${imgPath}`, { method: "DELETE", headers: authHdr }).catch(() => {});
+            imgPath = newPath;
+          }
+
+          setSaveStatus("Menyimpan perubahan karya...");
+          const updateRecord = {
+            title,
+            description: desc,
+            category,
+            image_path: imgPath,
+            tags: String(data.get("tags") || "").split(",").map((t) => t.trim()).filter(Boolean),
+            demo_url: String(data.get("demo") || "").trim() || null
+          };
+
+          const patchRes = await fetch(`${SUPABASE.url}/rest/v1/portfolio_items?id=eq.${encodeURIComponent(editId)}`, {
+            method: "PATCH",
+            headers: { ...authHdr, "Content-Type": "application/json", Prefer: "return=representation" },
+            body: JSON.stringify(updateRecord),
+            signal: AbortSignal.timeout(12000)
+          });
+          if (!patchRes.ok) throw new Error(`Gagal update karya: ${await responseError(patchRes, "izin tabel ditolak")}`);
+
+          const updatedRows = await patchRes.json();
+          const updatedItem = updatedRows[0] || { ...existingItem, ...updateRecord };
+          const idx = cloudItems.findIndex((x) => x.id === editId);
+          if (idx !== -1) cloudItems[idx] = updatedItem;
+
+          cancelEditWork();
+          refreshAdminList();
+          refreshPublicPortfolio();
+          toast("✅ Karya berhasil diperbarui!");
+        } else {
+          // ==================== MODE UPLOAD KARYA BARU ====================
+          setSaveStatus("Mengunggah gambar...");
+          const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
+          const imgPath  = `${currentUser.id}/${Date.now()}-${safeName}`;
+
+          const upRes = await fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${imgPath}`, {
+            method: "POST", headers: { ...authHdr, "Content-Type": file.type, "x-upsert": "false" }, body: file, signal: AbortSignal.timeout(30000)
+          });
+          if (!upRes.ok) throw new Error(`Upload gambar gagal: ${await responseError(upRes, "izin storage ditolak")}`);
+
+          setSaveStatus("Menyimpan data...");
+          const record = {
+            owner_id: currentUser.id,
+            title, description: desc, category, image_path: imgPath,
+            tags: String(data.get("tags") || "").split(",").map((t) => t.trim()).filter(Boolean),
+            demo_url: String(data.get("demo") || "").trim() || null,
+            position: 0
+          };
+
+          const dbRes = await fetch(`${SUPABASE.url}/rest/v1/portfolio_items`, {
+            method: "POST",
+            headers: { ...authHdr, "Content-Type": "application/json", Prefer: "return=representation" },
+            body: JSON.stringify(record),
+            signal: AbortSignal.timeout(12000)
+          });
+          if (!dbRes.ok) {
+            fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${imgPath}`, { method: "DELETE", headers: authHdr }).catch(() => {});
+            throw new Error(`Simpan data gagal: ${await responseError(dbRes, "izin tabel ditolak")}`);
+          }
+          const rows = await dbRes.json();
+          cloudItems.unshift(rows[0]);
+          cancelEditWork();
+          refreshAdminList();
+          refreshPublicPortfolio();
+          toast("✅ Karya berhasil disimpan!");
         }
-        const rows = await dbRes.json();
-        cloudItems.unshift(rows[0]);
-        form.reset();
-        refreshAdminList();
-        refreshPublicPortfolio();
-        setSaveStatus("Karya berhasil ditambahkan!");
-        toast("Karya berhasil disimpan!");
       } catch (err) {
-        console.error("[Simpan Karya]", err);
-        setSaveStatus(`${err.message}`);
+        console.error("[Karya Save/Edit]", err);
+        setSaveStatus(`❌ ${err.message}`);
         toast(`Gagal: ${err.message}`);
       } finally {
-        submitBtn.disabled    = false;
-        submitBtn.textContent = "Simpan karya";
+        submitBtn.disabled = false;
+        submitBtn.textContent = $("#edit-work-id").value ? "Simpan Perubahan" : "Simpan karya";
       }
     });
+
+    // PENGATURAN TAMPILAN PORTOFOLIO (NAMA, BIO, CV, FOTO/KARAKTER INTRO)
+    const profileForm = $("#admin-profile-form");
+    if (profileForm) {
+      profileForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const nameInput   = $("#profile-name");
+        const bioInput    = $("#profile-bio");
+        const cvInput     = $("#profile-cv");
+        const avatarInput = $("#profile-avatar-file");
+        const statusEl    = $("#profile-save-status");
+        const submitBtn   = $("#profile-submit-btn");
+
+        const name       = nameInput ? nameInput.value.trim() : "";
+        const bio        = bioInput  ? bioInput.value.trim()  : "";
+        const cvUrl      = cvInput   ? cvInput.value.trim()   : "";
+        const avatarFile = avatarInput && avatarInput.files ? avatarInput.files[0] : null;
+
+        if (!name) return statusEl.textContent = "Nama tidak boleh kosong.";
+        if (!bio)  return statusEl.textContent = "Bio tidak boleh kosong.";
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Menyimpan tampilan...";
+        statusEl.textContent = "Menyimpan perubahan...";
+
+        try {
+          let newAvatarUrl = SITE.avatar;
+
+          // Jika ada upload gambar ilustrasi / karakter baru
+          if (avatarFile instanceof File && avatarFile.size > 0) {
+            if (avatarFile.size > 50 * 1024 * 1024) throw new Error("Ukuran foto maksimal 50MB.");
+            statusEl.textContent = "Mengunggah karakter ilustrasi baru...";
+            const safeName   = avatarFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
+            const avatarPath = `${currentUser ? currentUser.id : "profile"}/avatar-${Date.now()}-${safeName}`;
+            const authHdr    = { ...apiHeaders, Authorization: `Bearer ${adminToken}` };
+
+            const upRes = await fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${avatarPath}`, {
+              method: "POST",
+              headers: { ...authHdr, "Content-Type": avatarFile.type, "x-upsert": "true" },
+              body: avatarFile,
+              signal: AbortSignal.timeout(30000)
+            });
+            if (!upRes.ok) throw new Error(`Upload foto karakter gagal: ${await responseError(upRes, "izin storage ditolak")}`);
+            newAvatarUrl = publicImageUrl(avatarPath);
+          }
+
+          // Perbarui objek data runtime
+          SITE.name      = name;
+          const parts    = name.split(" ");
+          SITE.firstName = parts[0];
+          SITE.lastName  = parts.slice(1).join(" ") || parts[0];
+          SITE.bio       = bio;
+          SITE.cvUrl     = cvUrl || "#";
+          SITE.avatar    = newAvatarUrl;
+
+          // Render ulang tampilan halaman depan seketika
+          fillStatic();
+
+          // Simpan ke localStorage agar awet di browser
+          localStorage.setItem("portfolio-custom-profile", JSON.stringify({
+            name: SITE.name,
+            firstName: SITE.firstName,
+            lastName: SITE.lastName,
+            bio: SITE.bio,
+            cvUrl: SITE.cvUrl,
+            avatar: SITE.avatar
+          }));
+
+          // Simpan ke database Supabase profiles jika login
+          if (currentUser) {
+            const authHdr = { ...apiHeaders, Authorization: `Bearer ${adminToken}` };
+            fetch(`${SUPABASE.url}/rest/v1/profiles?id=eq.${encodeURIComponent(currentUser.id)}`, {
+              method: "PATCH",
+              headers: { ...authHdr, "Content-Type": "application/json" },
+              body: JSON.stringify({ display_name: name, bio: bio, avatar_url: newAvatarUrl })
+            }).catch(() => {});
+          }
+
+          statusEl.textContent = "✅ Tampilan portofolio berhasil disimpan!";
+          toast("✅ Tampilan portofolio berhasil diperbarui!");
+        } catch (err) {
+          console.error("[Profile Update]", err);
+          statusEl.textContent = `❌ ${err.message}`;
+          toast(`Gagal: ${err.message}`);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Simpan Tampilan Portofolio";
+        }
+      });
+    }
   }
+
   /* ==========================================================
      START
      ========================================================== */
   async function start() {
-    // Admin must stay available even when public cloud data is slow or offline.
+    // Muat profil kustom dari localStorage jika sudah pernah diedit lewat admin
+    const savedProf = localStorage.getItem("portfolio-custom-profile");
+    if (savedProf) {
+      try {
+        const sp = JSON.parse(savedProf);
+        if (sp.name)      SITE.name      = sp.name;
+        if (sp.firstName) SITE.firstName = sp.firstName;
+        if (sp.lastName)  SITE.lastName  = sp.lastName;
+        if (sp.bio)       SITE.bio       = sp.bio;
+        if (sp.cvUrl)     SITE.cvUrl     = sp.cvUrl;
+        if (sp.avatar)    SITE.avatar    = sp.avatar;
+      } catch {}
+    }
+
     initAdmin();
     await loadCloudItems();
     fillStatic();

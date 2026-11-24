@@ -171,27 +171,77 @@
         </form>
       </section>
       <section id="admin-dashboard" hidden>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.75rem;">
           <div>
             <p class="admin-kicker">Halo, <span id="admin-username-display" style="font-weight:600; color:var(--brand,#3b82f6);">-</span></p>
-            <h2 style="margin:0;">Kelola Karya</h2>
+            <h2 style="margin:0; font-size:1.5rem;">Panel Pengelola</h2>
           </div>
           <button type="button" id="admin-logout" class="btn sm" style="padding: 6px 14px; font-size: 13px; background: transparent; border: 1px solid currentColor; color: inherit;">Keluar</button>
         </div>
-        <p class="muted">Upload gambar karya (JPG/PNG/WebP/GIF). Karya akan langsung tampil di halaman portofolio.</p>
-        <form id="admin-work-form" class="admin-form">
-          <label class="lbl">Judul karya<input class="plain" name="title" type="text" maxlength="80" required></label>
-          <label class="lbl">Deskripsi singkat<textarea class="plain" name="desc" rows="3" maxlength="300" required></textarea></label>
-          <div class="admin-grid">
-            <label class="lbl">Kategori<select class="plain" name="category"><option value="projects">Projects</option><option value="certificates">Certificates</option><option value="awards">Awards</option></select></label>
-            <label class="lbl">Tags<input class="plain" name="tags" type="text" maxlength="100" placeholder="Illustration, Canva"></label>
+
+        <!-- Tab navigasi internal admin -->
+        <div style="display:flex; gap:8px; margin-bottom:1.25rem; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+          <button type="button" id="tab-btn-works" class="btn sm" style="padding:8px 16px; font-size:13px; border-radius:8px;">🎨 Kelola Karya</button>
+          <button type="button" id="tab-btn-profile" class="btn sm" style="padding:8px 16px; font-size:13px; border-radius:8px; background:transparent; border:1px solid #cbd5e1; color:inherit;">⚙️ Tampilan Portofolio</button>
+        </div>
+
+        <!-- Bagian 1: Kelola Karya (Upload, Edit, Hapus) -->
+        <div id="admin-tab-works">
+          <h3 id="admin-work-form-title" style="margin-bottom:4px; font-size:1.1rem;">Tambah karya baru</h3>
+          <p class="muted" id="admin-work-form-desc">Upload gambar karya (JPG, PNG, WebP, GIF). Maksimal 50MB.</p>
+          <form id="admin-work-form" class="admin-form" style="margin-top:14px;">
+            <input type="hidden" id="edit-work-id" value="">
+            <label class="lbl">Judul karya<input class="plain" id="work-title" name="title" type="text" maxlength="80" required></label>
+            <label class="lbl">Deskripsi singkat<textarea class="plain" id="work-desc" name="desc" rows="3" maxlength="300" required></textarea></label>
+            <div class="admin-grid">
+              <label class="lbl">Kategori
+                <select class="plain" id="work-category" name="category">
+                  <option value="projects">Projects</option>
+                  <option value="certificates">Certificates</option>
+                  <option value="awards">Awards</option>
+                </select>
+              </label>
+              <label class="lbl">Tags<input class="plain" id="work-tags" name="tags" type="text" maxlength="100" placeholder="Illustration, Canva"></label>
+            </div>
+            <label class="lbl"><span id="work-image-label">Gambar karya</span>
+              <input class="plain admin-file" id="work-image-input" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required>
+            </label>
+            <label class="lbl">Link karya, opsional<input class="plain" id="work-demo" name="demo" type="url" maxlength="500" placeholder="https://..."></label>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <button class="btn" id="work-submit-btn" type="submit">Simpan karya</button>
+              <button class="btn sm" id="work-cancel-edit-btn" type="button" style="display:none; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">✕ Batal Edit</button>
+            </div>
+            <p class="admin-status" id="admin-save-status" role="status" aria-live="polite"></p>
+          </form>
+
+          <div class="admin-list-wrap">
+            <h3>Daftar karya online</h3>
+            <ul class="admin-list" id="admin-work-list"></ul>
           </div>
-          <label class="lbl">Gambar karya<input class="plain admin-file" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required></label>
-          <label class="lbl">Link karya, opsional<input class="plain" name="demo" type="url" maxlength="500" placeholder="https://..."></label>
-          <button class="btn" type="submit">Simpan karya</button>
-          <p class="admin-status" id="admin-save-status" role="status" aria-live="polite"></p>
-        </form>
-        <div class="admin-list-wrap"><h3>Karya online</h3><ul class="admin-list" id="admin-work-list"></ul></div>
+        </div>
+
+        <!-- Bagian 2: Pengaturan Tampilan Portofolio (Nama, Bio, CV, Foto Intro) -->
+        <div id="admin-tab-profile" style="display:none;">
+          <h3 style="margin-bottom:4px; font-size:1.1rem;">Ubah Tampilan Portofolio</h3>
+          <p class="muted">Ubah nama, bio, link CV, dan foto/karakter ilustrasi intro "Hi, I'm...".</p>
+          <form id="admin-profile-form" class="admin-form" style="margin-top:14px;">
+            <label class="lbl">Nama Lengkap (tampil di header & intro)
+              <input class="plain" id="profile-name" type="text" maxlength="60" required placeholder="Zakky Zakaria">
+            </label>
+            <label class="lbl">Bio Singkat
+              <textarea class="plain" id="profile-bio" rows="3" maxlength="350" required placeholder="Ceritakan tentang dirimu dan karyamu..."></textarea>
+            </label>
+            <label class="lbl">Link CV (URL Google Drive / link PDF)
+              <input class="plain" id="profile-cv" type="url" placeholder="https://drive.google.com/..." maxlength="500">
+            </label>
+            <label class="lbl">Foto Profil / Karakter Ilustrasi (Intro)
+              <input class="plain admin-file" id="profile-avatar-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml">
+              <small style="display:block; margin-top:4px; color:var(--muted,#64748b);">Pilih gambar karakter ilustrasi baru untuk menggantikan karakter intro di halaman depan.</small>
+            </label>
+            <button class="btn" id="profile-submit-btn" type="submit">Simpan Tampilan Portofolio</button>
+            <p class="admin-status" id="profile-save-status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
       </section>
     </div>
   </dialog>
