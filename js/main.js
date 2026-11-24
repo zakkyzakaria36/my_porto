@@ -544,39 +544,12 @@
 
   async function loadCloudItems() {
     try {
-      // Prioritas 1: load sesuai user di URL (?user=xxx atau /xxx)
-      let queryUrl = `${SUPABASE.url}/rest/v1/portfolio_items?select=*,profiles(username,display_name,bio,avatar_url)&order=position.asc,created_at.desc`;
-      if (urlUsername) {
-        queryUrl += `&profiles.username=eq.${encodeURIComponent(urlUsername)}`;
-      } else if (SUPABASE.adminEmail) {
-        // Halaman utama default menampilkan portofolio owner utama
-        const defaultUser = SUPABASE.adminEmail.split("@")[0].toLowerCase().replace(/[^a-z0-9_-]/g, "-");
-        queryUrl += `&profiles.username=eq.${encodeURIComponent(defaultUser)}`;
-      }
-
-      let res = await fetch(queryUrl, { headers: apiHeaders, signal: AbortSignal.timeout(8000) });
-      
-      // Fallback jika query join profiles belum ada atau kosong, ambil semua
-      if (!res.ok) {
-        res = await fetch(`${SUPABASE.url}/rest/v1/portfolio_items?select=*&order=position.asc,created_at.desc`, { headers: apiHeaders, signal: AbortSignal.timeout(8000) });
-      }
-
+      const res = await fetch(`${SUPABASE.url}/rest/v1/portfolio_items?select=*&order=position.asc,created_at.desc`, {
+        headers: apiHeaders,
+        signal: AbortSignal.timeout(8000)
+      });
       if (res.ok) {
         cloudItems = await res.json();
-        // Update data profil jika tersedia
-        const first = cloudItems.find((x) => x.profiles && x.profiles.display_name);
-        if (first && first.profiles) {
-          const p = first.profiles;
-          if (p.display_name) {
-            SITE.name = p.display_name;
-            const parts = p.display_name.split(" ");
-            SITE.firstName = parts[0];
-            SITE.lastName = parts.slice(1).join(" ") || parts[0];
-          }
-          if (p.bio) SITE.bio = p.bio;
-          if (p.avatar_url) SITE.avatar = p.avatar_url;
-        }
-
         SITE.projects     = cloudItems.filter((x) => x.category === "projects").map(cloudToItem);
         SITE.certificates = cloudItems.filter((x) => x.category === "certificates").map(cloudToItem);
         SITE.awards       = cloudItems.filter((x) => x.category === "awards").map(cloudToItem);
@@ -589,7 +562,7 @@
   function refreshAdminList() {
     const list = $("#admin-work-list");
     if (!list) return;
-    const mine = currentUser ? cloudItems.filter((x) => x.owner_id === currentUser.id) : cloudItems;
+    const mine = cloudItems;
     list.innerHTML = mine.length
       ? mine.map((item) => `
         <li>
@@ -837,14 +810,14 @@
           if (file instanceof File && file.size > 0) {
             setSaveStatus("Mengunggah gambar baru...");
             const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
-            const newPath  = `${currentUser.id}/${Date.now()}-${safeName}`;
-            const upRes = await fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${newPath}`, {
+            const newPath  = `${Date.now()}-${safeName}`;
+            const upRes = await fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${encodeURIComponent(newPath)}`, {
               method: "POST", headers: { ...authHdr, "Content-Type": file.type, "x-upsert": "false" }, body: file, signal: AbortSignal.timeout(30000)
             });
             if (!upRes.ok) throw new Error(`Upload gambar baru gagal: ${await responseError(upRes, "izin storage ditolak")}`);
             
             // Hapus gambar lama jika ada
-            if (imgPath) fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${imgPath}`, { method: "DELETE", headers: authHdr }).catch(() => {});
+            if (imgPath) fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${encodeURIComponent(imgPath)}`, { method: "DELETE", headers: authHdr }).catch(() => {});
             imgPath = newPath;
           }
 
@@ -879,16 +852,15 @@
           // ==================== MODE UPLOAD KARYA BARU ====================
           setSaveStatus("Mengunggah gambar...");
           const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
-          const imgPath  = `${currentUser.id}/${Date.now()}-${safeName}`;
+          const imgPath  = `${Date.now()}-${safeName}`;
 
-          const upRes = await fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${imgPath}`, {
+          const upRes = await fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${encodeURIComponent(imgPath)}`, {
             method: "POST", headers: { ...authHdr, "Content-Type": file.type, "x-upsert": "false" }, body: file, signal: AbortSignal.timeout(30000)
           });
           if (!upRes.ok) throw new Error(`Upload gambar gagal: ${await responseError(upRes, "izin storage ditolak")}`);
 
           setSaveStatus("Menyimpan data...");
           const record = {
-            owner_id: currentUser.id,
             title, description: desc, category, image_path: imgPath,
             tags: String(data.get("tags") || "").split(",").map((t) => t.trim()).filter(Boolean),
             demo_url: String(data.get("demo") || "").trim() || null,
@@ -902,7 +874,7 @@
             signal: AbortSignal.timeout(12000)
           });
           if (!dbRes.ok) {
-            fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${imgPath}`, { method: "DELETE", headers: authHdr }).catch(() => {});
+            fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${encodeURIComponent(imgPath)}`, { method: "DELETE", headers: authHdr }).catch(() => {});
             throw new Error(`Simpan data gagal: ${await responseError(dbRes, "izin tabel ditolak")}`);
           }
           const rows = await dbRes.json();
@@ -954,10 +926,10 @@
             if (avatarFile.size > 50 * 1024 * 1024) throw new Error("Ukuran foto maksimal 50MB.");
             statusEl.textContent = "Mengunggah karakter ilustrasi baru...";
             const safeName   = avatarFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
-            const avatarPath = `${currentUser ? currentUser.id : "profile"}/avatar-${Date.now()}-${safeName}`;
+            const avatarPath = `avatar-${Date.now()}-${safeName}`;
             const authHdr    = { ...apiHeaders, Authorization: `Bearer ${adminToken}` };
 
-            const upRes = await fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${avatarPath}`, {
+            const upRes = await fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/${encodeURIComponent(avatarPath)}`, {
               method: "POST",
               headers: { ...authHdr, "Content-Type": avatarFile.type, "x-upsert": "true" },
               body: avatarFile,
