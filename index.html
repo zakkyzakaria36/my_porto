@@ -180,9 +180,10 @@
         </div>
 
         <!-- Tab navigasi internal admin -->
-        <div style="display:flex; gap:8px; margin-bottom:1.25rem; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
-          <button type="button" id="tab-btn-works" class="btn sm" style="padding:8px 16px; font-size:13px; border-radius:8px;">🎨 Kelola Karya</button>
-          <button type="button" id="tab-btn-profile" class="btn sm" style="padding:8px 16px; font-size:13px; border-radius:8px; background:transparent; border:1px solid #cbd5e1; color:inherit;">⚙️ Tampilan Portofolio</button>
+        <div style="display:flex; gap:8px; margin-bottom:1.25rem; border-bottom:1px solid #e2e8f0; padding-bottom:8px; flex-wrap:wrap;">
+          <button type="button" id="tab-btn-works" class="btn sm" style="padding:8px 14px; font-size:13px; border-radius:8px;">🎨 Kelola Karya</button>
+          <button type="button" id="tab-btn-timeline" class="btn sm" style="padding:8px 14px; font-size:13px; border-radius:8px; background:transparent; border:1px solid #cbd5e1; color:inherit;">🎓 Edu & Pengalaman</button>
+          <button type="button" id="tab-btn-profile" class="btn sm" style="padding:8px 14px; font-size:13px; border-radius:8px; background:transparent; border:1px solid #cbd5e1; color:inherit;">⚙️ Tampilan Portofolio</button>
         </div>
 
         <!-- Bagian 1: Kelola Karya (Upload, Edit, Hapus) -->
@@ -220,7 +221,72 @@
           </div>
         </div>
 
-        <!-- Bagian 2: Pengaturan Tampilan Portofolio (Nama, Bio, CV, Foto Intro) -->
+        <!-- Bagian 2: Kelola Education & Experience -->
+        <div id="admin-tab-timeline" style="display:none;">
+          <h3 style="margin-bottom:4px; font-size:1.1rem;">Kelola Education &amp; Experience</h3>
+          <p class="muted">Tambah, edit, atau hapus riwayat pendidikan dan pengalaman yang tampil di portofolio.</p>
+
+          <!-- Form Tambah / Edit Riwayat -->
+          <form id="admin-timeline-form" class="admin-form" style="margin-top:14px; background:#f8fafc; padding:16px; border-radius:10px; border:1px solid #e2e8f0;">
+            <input type="hidden" id="timeline-edit-index" value="-1">
+            <h4 id="timeline-form-title" style="margin-top:0; margin-bottom:10px; font-size:14px; color:#0f172a;">+ Tambah Riwayat Baru</h4>
+            <div class="admin-grid">
+              <label class="lbl">Tipe Riwayat
+                <select class="plain" id="timeline-type">
+                  <option value="education">Education (Pendidikan)</option>
+                  <option value="experience">Experience (Pengalaman)</option>
+                </select>
+              </label>
+              <label class="lbl">Inisial / Logo (2-4 huruf)
+                <input class="plain" id="timeline-logo" type="text" maxlength="4" placeholder="UC / SM / KC" required>
+              </label>
+            </div>
+            <label class="lbl">Nama Kampus / Sekolah / Organisasi
+              <input class="plain" id="timeline-org" type="text" maxlength="80" placeholder="Universitas Contoh" required>
+            </label>
+            <div class="admin-grid">
+              <label class="lbl">Jurusan / Peran / Jabatan
+                <input class="plain" id="timeline-role" type="text" maxlength="80" placeholder="Data Science / Anggota" required>
+              </label>
+              <label class="lbl">Tahun / Periode
+                <input class="plain" id="timeline-date" type="text" maxlength="40" placeholder="2026 – Sekarang" required>
+              </label>
+            </div>
+            <div class="admin-grid">
+              <label class="lbl">Keterangan Tambahan / Lokasi
+                <input class="plain" id="timeline-meta" type="text" maxlength="80" placeholder="Fakultas Teknologi / Kota Kamu">
+              </label>
+              <label class="lbl">Tag / Badge
+                <input class="plain" id="timeline-tag" type="text" maxlength="40" placeholder="Undergraduate / Community / IPA" required>
+              </label>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; margin-top:8px;">
+              <button class="btn sm" id="timeline-submit-btn" type="submit" style="padding:8px 16px;">Simpan Riwayat</button>
+              <button class="btn sm" id="timeline-cancel-btn" type="button" style="display:none; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:8px 14px;">✕ Batal</button>
+            </div>
+            <p class="admin-status" id="timeline-save-status" role="status" aria-live="polite" style="margin-top:8px;"></p>
+          </form>
+
+          <!-- Daftar Education -->
+          <div style="margin-top:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <h4 style="margin:0; font-size:15px; color:#0f172a;">🎓 Daftar Education</h4>
+              <button type="button" class="btn sm" id="btn-add-edu" style="padding:4px 10px; font-size:12px;">+ Tambah</button>
+            </div>
+            <ul class="admin-list" id="admin-edu-list"></ul>
+          </div>
+
+          <!-- Daftar Experience -->
+          <div style="margin-top:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <h4 style="margin:0; font-size:15px; color:#0f172a;">💼 Daftar Experience</h4>
+              <button type="button" class="btn sm" id="btn-add-exp" style="padding:4px 10px; font-size:12px;">+ Tambah</button>
+            </div>
+            <ul class="admin-list" id="admin-exp-list"></ul>
+          </div>
+        </div>
+
+        <!-- Bagian 3: Pengaturan Tampilan Portofolio (Nama, Bio, CV, Foto Intro) -->
         <div id="admin-tab-profile" style="display:none;">
           <h3 style="margin-bottom:4px; font-size:1.1rem;">Ubah Tampilan Portofolio</h3>
           <p class="muted">Ubah nama, bio, link CV, dan foto/karakter ilustrasi intro "Hi, I'm...".</p>

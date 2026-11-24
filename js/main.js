@@ -662,29 +662,171 @@
   }
 
   function switchAdminTab(tab) {
-    const isWorks = tab === "works";
-    const worksSection   = $("#admin-tab-works");
-    const profileSection = $("#admin-tab-profile");
-    const btnWorks       = $("#tab-btn-works");
-    const btnProfile     = $("#tab-btn-profile");
+    const worksSection    = $("#admin-tab-works");
+    const timelineSection = $("#admin-tab-timeline");
+    const profileSection  = $("#admin-tab-profile");
 
-    if (worksSection)   worksSection.style.display   = isWorks ? "block" : "none";
-    if (profileSection) profileSection.style.display = isWorks ? "none"  : "block";
+    const btnWorks    = $("#tab-btn-works");
+    const btnTimeline = $("#tab-btn-timeline");
+    const btnProfile  = $("#tab-btn-profile");
 
-    if (isWorks) {
-      if (btnWorks)   { btnWorks.style.background = ""; btnWorks.style.border = "none"; }
-      if (btnProfile) { btnProfile.style.background = "transparent"; btnProfile.style.border = "1px solid #cbd5e1"; }
-    } else {
-      if (btnProfile) { btnProfile.style.background = ""; btnProfile.style.border = "none"; }
-      if (btnWorks)   { btnWorks.style.background = "transparent"; btnWorks.style.border = "1px solid #cbd5e1"; }
+    if (worksSection)    worksSection.style.display    = tab === "works"    ? "block" : "none";
+    if (timelineSection) timelineSection.style.display = tab === "timeline" ? "block" : "none";
+    if (profileSection)  profileSection.style.display  = tab === "profile"  ? "block" : "none";
 
-      // Isi form profil dengan data terkini
+    const setBtn = (btn, active) => {
+      if (!btn) return;
+      if (active) {
+        btn.style.background = "";
+        btn.style.border = "none";
+      } else {
+        btn.style.background = "transparent";
+        btn.style.border = "1px solid #cbd5e1";
+      }
+    };
+
+    setBtn(btnWorks,    tab === "works");
+    setBtn(btnTimeline, tab === "timeline");
+    setBtn(btnProfile,  tab === "profile");
+
+    if (tab === "timeline") {
+      refreshTimelineLists();
+    } else if (tab === "profile") {
       const nameInp = $("#profile-name");
       const bioInp  = $("#profile-bio");
       const cvInp   = $("#profile-cv");
       if (nameInp) nameInp.value = SITE.name || "";
       if (bioInp)  bioInp.value  = SITE.bio || "";
       if (cvInp)   cvInp.value   = SITE.cvUrl && SITE.cvUrl !== "#" ? SITE.cvUrl : "";
+    }
+  }
+
+  function refreshTimelineLists() {
+    const eduList = $("#admin-edu-list");
+    const expList = $("#admin-exp-list");
+    if (!eduList || !expList) return;
+
+    eduList.innerHTML = (SITE.education || []).length
+      ? SITE.education.map((it, idx) => `
+        <li>
+          <span style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; background:#e2e8f0; border-radius:6px; font-weight:800; font-size:12px; color:#334155;">${esc(it.logo || "•")}</span>
+          <span style="flex:1;">
+            <b>${esc(it.org)}</b> <small style="color:#64748b;">(${esc(it.date)})</small><br>
+            <small style="color:#475569;">${esc(it.role)} • <span style="font-weight:600; color:#0284c7;">${esc(it.tag)}</span></small>
+          </span>
+          <div class="item-actions">
+            <button type="button" class="btn-edit" data-edit-edu="${idx}">✏️ Edit</button>
+            <button type="button" class="btn-delete" data-del-edu="${idx}">🗑️ Hapus</button>
+          </div>
+        </li>
+      `).join("")
+      : "<li>Belum ada data education.</li>";
+
+    expList.innerHTML = (SITE.experience || []).length
+      ? SITE.experience.map((it, idx) => `
+        <li>
+          <span style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; background:#e2e8f0; border-radius:6px; font-weight:800; font-size:12px; color:#334155;">${esc(it.logo || "•")}</span>
+          <span style="flex:1;">
+            <b>${esc(it.org)}</b> <small style="color:#64748b;">(${esc(it.date)})</small><br>
+            <small style="color:#475569;">${esc(it.role)} • <span style="font-weight:600; color:#0284c7;">${esc(it.tag)}</span></small>
+          </span>
+          <div class="item-actions">
+            <button type="button" class="btn-edit" data-edit-exp="${idx}">✏️ Edit</button>
+            <button type="button" class="btn-delete" data-del-exp="${idx}">🗑️ Hapus</button>
+          </div>
+        </li>
+      `).join("")
+      : "<li>Belum ada data experience.</li>";
+
+    $$("[data-edit-edu]", eduList).forEach((b) => b.addEventListener("click", () => startEditTimeline("education", Number(b.dataset.editEdu))));
+    $$("[data-del-edu]", eduList).forEach((b) => b.addEventListener("click", () => deleteTimelineItem("education", Number(b.dataset.delEdu))));
+
+    $$("[data-edit-exp]", expList).forEach((b) => b.addEventListener("click", () => startEditTimeline("experience", Number(b.dataset.editExp))));
+    $$("[data-del-exp]", expList).forEach((b) => b.addEventListener("click", () => deleteTimelineItem("experience", Number(b.dataset.delExp))));
+  }
+
+  function startEditTimeline(type, idx) {
+    const list = SITE[type];
+    if (!list || !list[idx]) return;
+    const it = list[idx];
+
+    $("#timeline-edit-index").value = `${type}:${idx}`;
+    $("#timeline-type").value       = type;
+    $("#timeline-logo").value       = it.logo || "";
+    $("#timeline-org").value        = it.org || "";
+    $("#timeline-role").value       = it.role || "";
+    $("#timeline-date").value       = it.date || "";
+    $("#timeline-meta").value       = it.meta || "";
+    $("#timeline-tag").value        = it.tag || "";
+
+    $("#timeline-form-title").textContent  = `✏️ Edit ${type === "education" ? "Education" : "Experience"}: ${it.org}`;
+    $("#timeline-submit-btn").textContent  = "Simpan Perubahan";
+    $("#timeline-cancel-btn").style.display = "inline-block";
+
+    const form = $("#admin-timeline-form");
+    if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function cancelEditTimeline() {
+    const form = $("#admin-timeline-form");
+    if (form) form.reset();
+    $("#timeline-edit-index").value = "-1";
+    $("#timeline-form-title").textContent  = "+ Tambah Riwayat Baru";
+    $("#timeline-submit-btn").textContent  = "Simpan Riwayat";
+    $("#timeline-cancel-btn").style.display = "none";
+    $("#timeline-save-status").textContent  = "";
+  }
+
+  async function deleteTimelineItem(type, idx) {
+    const list = SITE[type];
+    if (!list || !list[idx]) return;
+    const it = list[idx];
+    if (!confirm(`Hapus riwayat "${it.org} (${it.role})"?`)) return;
+
+    list.splice(idx, 1);
+    cancelEditTimeline();
+    renderTimeline("#education", SITE.education);
+    renderTimeline("#experience", SITE.experience);
+    watchTimelines();
+    refreshTimelineLists();
+    await saveCloudSettings();
+    toast(`✅ Riwayat ${it.org} berhasil dihapus.`);
+  }
+
+  async function saveCloudSettings() {
+    const settingsData = {
+      profile: {
+        name: SITE.name,
+        firstName: SITE.firstName,
+        lastName: SITE.lastName,
+        bio: SITE.bio,
+        cvUrl: SITE.cvUrl,
+        avatar: SITE.avatar
+      },
+      education: SITE.education,
+      experience: SITE.experience
+    };
+    try {
+      localStorage.setItem("portfolio-cloud-settings", JSON.stringify(settingsData));
+    } catch {}
+
+    // Simpan ke Supabase Storage (public json agar sync untuk semua pengunjung)
+    if (adminToken) {
+      try {
+        const blob = new Blob([JSON.stringify(settingsData, null, 2)], { type: "application/json" });
+        await fetch(`${SUPABASE.url}/storage/v1/object/portfolio-assets/portfolio-settings.json`, {
+          method: "POST",
+          headers: {
+            ...apiHeaders,
+            Authorization: `Bearer ${adminToken}`,
+            "Content-Type": "application/json",
+            "x-upsert": "true"
+          },
+          body: blob
+        });
+      } catch (err) {
+        console.warn("Gagal upload settings ke cloud storage:", err);
+      }
     }
   }
 
@@ -699,14 +841,90 @@
     dialog.addEventListener("click", (e) => e.target === dialog && dialog.close());
 
     // Tab navigasi admin
-    const btnWorks   = $("#tab-btn-works");
-    const btnProfile = $("#tab-btn-profile");
-    if (btnWorks)   btnWorks.addEventListener("click", () => switchAdminTab("works"));
-    if (btnProfile) btnProfile.addEventListener("click", () => switchAdminTab("profile"));
+    const btnWorks    = $("#tab-btn-works");
+    const btnTimeline = $("#tab-btn-timeline");
+    const btnProfile  = $("#tab-btn-profile");
+    if (btnWorks)    btnWorks.addEventListener("click", () => switchAdminTab("works"));
+    if (btnTimeline) btnTimeline.addEventListener("click", () => switchAdminTab("timeline"));
+    if (btnProfile)  btnProfile.addEventListener("click", () => switchAdminTab("profile"));
 
-    // Tombol Batal Edit
+    // Tombol Batal Edit Karya
     const cancelEditBtn = $("#work-cancel-edit-btn");
     if (cancelEditBtn) cancelEditBtn.addEventListener("click", cancelEditWork);
+
+    // Tombol Tambah Education / Experience
+    const btnAddEdu = $("#btn-add-edu");
+    if (btnAddEdu) btnAddEdu.addEventListener("click", () => {
+      cancelEditTimeline();
+      $("#timeline-type").value = "education";
+      $("#admin-timeline-form").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    const btnAddExp = $("#btn-add-exp");
+    if (btnAddExp) btnAddExp.addEventListener("click", () => {
+      cancelEditTimeline();
+      $("#timeline-type").value = "experience";
+      $("#admin-timeline-form").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    // Tombol Batal Edit Timeline
+    const cancelTimelineBtn = $("#timeline-cancel-btn");
+    if (cancelTimelineBtn) cancelTimelineBtn.addEventListener("click", cancelEditTimeline);
+
+    // Form Submit Timeline (Education & Experience)
+    const timelineForm = $("#admin-timeline-form");
+    if (timelineForm) {
+      timelineForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const editVal  = $("#timeline-edit-index").value;
+        const type     = $("#timeline-type").value;
+        const logo     = $("#timeline-logo").value.trim();
+        const org      = $("#timeline-org").value.trim();
+        const role     = $("#timeline-role").value.trim();
+        const date     = $("#timeline-date").value.trim();
+        const meta     = $("#timeline-meta").value.trim();
+        const tag      = $("#timeline-tag").value.trim();
+        const statusEl = $("#timeline-save-status");
+        const submitBtn = $("#timeline-submit-btn");
+
+        if (!org || !role || !date) {
+          if (statusEl) statusEl.textContent = "Organisasi, peran/jurusan, dan tahun/periode wajib diisi.";
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Menyimpan...";
+        if (statusEl) statusEl.textContent = "Menyimpan riwayat...";
+
+        const newItem = { logo: logo || "•", org, role, date, meta, tag: tag || "General" };
+
+        if (editVal && editVal.includes(":")) {
+          const [oldType, oldIdx] = editVal.split(":");
+          const idx = Number(oldIdx);
+          if (oldType === type) {
+            SITE[type][idx] = newItem;
+          } else {
+            SITE[oldType].splice(idx, 1);
+            if (!SITE[type]) SITE[type] = [];
+            SITE[type].push(newItem);
+          }
+        } else {
+          if (!SITE[type]) SITE[type] = [];
+          SITE[type].push(newItem);
+        }
+
+        renderTimeline("#education", SITE.education);
+        renderTimeline("#experience", SITE.experience);
+        watchTimelines();
+        refreshTimelineLists();
+        cancelEditTimeline();
+
+        await saveCloudSettings();
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Simpan Riwayat";
+        toast("✅ Riwayat berhasil disimpan!");
+      });
+    }
 
     const showDashboard = (user) => {
       currentUser = user;
@@ -951,25 +1169,8 @@
           // Render ulang tampilan halaman depan seketika
           fillStatic();
 
-          // Simpan ke localStorage agar awet di browser
-          localStorage.setItem("portfolio-custom-profile", JSON.stringify({
-            name: SITE.name,
-            firstName: SITE.firstName,
-            lastName: SITE.lastName,
-            bio: SITE.bio,
-            cvUrl: SITE.cvUrl,
-            avatar: SITE.avatar
-          }));
-
-          // Simpan ke database Supabase profiles jika login
-          if (currentUser) {
-            const authHdr = { ...apiHeaders, Authorization: `Bearer ${adminToken}` };
-            fetch(`${SUPABASE.url}/rest/v1/profiles?id=eq.${encodeURIComponent(currentUser.id)}`, {
-              method: "PATCH",
-              headers: { ...authHdr, "Content-Type": "application/json" },
-              body: JSON.stringify({ display_name: name, bio: bio, avatar_url: newAvatarUrl })
-            }).catch(() => {});
-          }
+          // Simpan ke cloud settings (localStorage & Supabase Storage)
+          await saveCloudSettings();
 
           statusEl.textContent = "✅ Tampilan portofolio berhasil disimpan!";
           toast("✅ Tampilan portofolio berhasil diperbarui!");
@@ -989,19 +1190,42 @@
      START
      ========================================================== */
   async function start() {
-    // Muat profil kustom dari localStorage jika sudah pernah diedit lewat admin
-    const savedProf = localStorage.getItem("portfolio-custom-profile");
-    if (savedProf) {
+    // 1. Muat settings dari localStorage jika ada
+    const cachedSettings = localStorage.getItem("portfolio-cloud-settings") || localStorage.getItem("portfolio-custom-profile");
+    if (cachedSettings) {
       try {
-        const sp = JSON.parse(savedProf);
-        if (sp.name)      SITE.name      = sp.name;
-        if (sp.firstName) SITE.firstName = sp.firstName;
-        if (sp.lastName)  SITE.lastName  = sp.lastName;
-        if (sp.bio)       SITE.bio       = sp.bio;
-        if (sp.cvUrl)     SITE.cvUrl     = sp.cvUrl;
-        if (sp.avatar)    SITE.avatar    = sp.avatar;
+        const cs = JSON.parse(cachedSettings);
+        if (cs.education && Array.isArray(cs.education))   SITE.education  = cs.education;
+        if (cs.experience && Array.isArray(cs.experience)) SITE.experience = cs.experience;
+        const p = cs.profile || cs;
+        if (p.name)      SITE.name      = p.name;
+        if (p.firstName) SITE.firstName = p.firstName;
+        if (p.lastName)  SITE.lastName  = p.lastName;
+        if (p.bio)       SITE.bio       = p.bio;
+        if (p.cvUrl)     SITE.cvUrl     = p.cvUrl;
+        if (p.avatar)    SITE.avatar    = p.avatar;
       } catch {}
     }
+
+    // 2. Muat settings terbaru dari Supabase Storage jika ada
+    try {
+      const setRes = await fetch(`${SUPABASE.url}/storage/v1/object/public/portfolio-assets/portfolio-settings.json?t=${Date.now()}`);
+      if (setRes.ok) {
+        const cs = await setRes.json();
+        if (cs.education && Array.isArray(cs.education))   SITE.education  = cs.education;
+        if (cs.experience && Array.isArray(cs.experience)) SITE.experience = cs.experience;
+        if (cs.profile) {
+          const p = cs.profile;
+          if (p.name)      SITE.name      = p.name;
+          if (p.firstName) SITE.firstName = p.firstName;
+          if (p.lastName)  SITE.lastName  = p.lastName;
+          if (p.bio)       SITE.bio       = p.bio;
+          if (p.cvUrl)     SITE.cvUrl     = p.cvUrl;
+          if (p.avatar)    SITE.avatar    = p.avatar;
+        }
+        localStorage.setItem("portfolio-cloud-settings", JSON.stringify(cs));
+      }
+    } catch {}
 
     initAdmin();
     await loadCloudItems();
