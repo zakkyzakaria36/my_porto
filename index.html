@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nama Kamu | Portofolio</title>
+  <meta name="description" content="Website portofolio pribadi: profil, proyek, sertifikat, penghargaan, dan kontak.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-theme="dark">
+
+  <!-- ============ NAVBAR ============ -->
+  <header class="nav-wrap">
+    <nav class="nav" id="nav" aria-label="Navigasi utama">
+      <span class="nav-indicator" aria-hidden="true"></span>
+      <span class="mascot" id="mascot" aria-hidden="true">
+        <span class="eye"><i></i></span><span class="eye"><i></i></span>
+      </span>
+      <a href="#home" class="nav-link" data-section="home">Home</a>
+      <a href="#about" class="nav-link" data-section="about">About</a>
+      <a href="#portfolio" class="nav-link" data-section="portfolio">Portfolio</a>
+      <a href="#contact" class="nav-link" data-section="contact">Contact</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ============ HOME ============ -->
+    <section id="home" class="section home" data-theme="dark" aria-label="Beranda">
+      <div class="scroll-hint" aria-hidden="true">Scroll</div>
+    </section>
+
+    <!-- ============ ABOUT ============ -->
+    <section id="about" class="section about" data-theme="dark">
+      <div class="container">
+        <div class="intro">
+          <div class="intro-left">
+            <p class="hi">Hi, I'm</p>
+            <h1 class="name" id="name"></h1>
+            <a class="btn" id="cv-btn" href="#" target="_blank" rel="noopener"></a>
+          </div>
+          <div class="intro-photo"><img id="avatar" alt="Foto profil" width="600" height="800"></div>
+          <div class="intro-right">
+            <p class="bio" id="bio"></p>
+            <a class="btn" href="#portfolio" id="projects-btn"></a>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <h2 class="h-sec">Education</h2>
+            <ol class="timeline" id="education"></ol>
+          </div>
+          <div>
+            <h2 class="h-sec">Experience</h2>
+            <ol class="timeline" id="experience"></ol>
+          </div>
+        </div>
+
+        <div class="folders" id="folders"></div>
+      </div>
+    </section>
+
+    <!-- ============ PORTFOLIO ============ -->
+    <section id="portfolio" class="section portfolio" data-theme="light">
+      <h2 class="big-title">PORTFOLIO</h2>
+
+      <div class="tabs" role="tablist" aria-label="Kategori portofolio">
+        <button class="tab is-active" role="tab" aria-selected="true" data-tab="projects"></button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="certificates"></button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="awards"></button>
+      </div>
+
+      <div class="panel" id="panel-projects" role="tabpanel">
+        <div class="carousel" data-carousel="projects">
+          <button class="car-btn prev" aria-label="Sebelumnya"></button>
+          <div class="viewport"><div class="track"></div></div>
+          <button class="car-btn next" aria-label="Berikutnya"></button>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-certificates" role="tabpanel" hidden>
+        <div class="carousel" data-carousel="certificates">
+          <button class="car-btn prev" aria-label="Sebelumnya"></button>
+          <div class="viewport"><div class="track"></div></div>
+          <button class="car-btn next" aria-label="Berikutnya"></button>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-awards" role="tabpanel" hidden>
+        <div class="stage" id="stage"></div>
+        <p class="stage-tip">Geser foto untuk memindahkannya, klik untuk memperbesar.</p>
+      </div>
+    </section>
+
+    <!-- ============ CONTACT ============ -->
+    <section id="contact" class="section contact" data-theme="light">
+      <div class="container contact-grid">
+        <div class="col">
+          <div class="card">
+            <h2 class="card-title brand">Hubungi</h2>
+            <p class="muted">Ada yang mau didiskusikan? Langsung kirim pesan aja ya..!</p>
+            <form id="contact-form" novalidate>
+              <label class="field icon-field"><span data-icon="user"></span>
+                <input name="name" type="text" placeholder="Nama Anda" required autocomplete="name"></label>
+              <label class="field icon-field"><span data-icon="mail"></span>
+                <input name="email" type="email" placeholder="Email Anda" required autocomplete="email"></label>
+              <label class="field icon-field top"><span data-icon="message"></span>
+                <textarea name="message" rows="4" placeholder="Pesan Anda" required></textarea></label>
+              <button class="btn block" type="submit"><span data-icon="send"></span> Kirim Pesan</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title sm">Find Me</h3>
+            <ul class="socials" id="socials"></ul>
+            <img class="contact-photo" id="contact-photo" alt="Foto" loading="lazy">
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="card">
+            <h2 class="card-title"><span class="chip" data-icon="message"></span> Tulis Komentar</h2>
+            <form id="comment-form" novalidate>
+              <label class="lbl">Nama
+                <input class="plain" name="name" type="text" maxlength="40" placeholder="Masukkan nama kamu" required></label>
+              <label class="lbl">Komentar
+                <textarea class="plain" name="comment" rows="4" maxlength="400" placeholder="Tulis komentar kamu di sini..." required></textarea></label>
+              <div class="lbl">Foto Profil <small>(opsional)</small>
+                <label class="file" for="photo"><span data-icon="imageplus"></span> <span id="file-label">Choose Profile Photo</span></label>
+                <input id="photo" name="photo" type="file" accept="image/*" hidden>
+                <small class="center">Max file size 5MB</small>
+              </div>
+              <button class="btn block" type="submit"><span data-icon="send"></span> Kirim Komentar</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title"><span class="chip" data-icon="message"></span> Komentar <span class="brand" id="comment-count">(0)</span></h3>
+            <ul class="comments" id="comments"></ul>
+          </div>
+        </div>
+      </div>
+      <footer class="footer">© <span id="year"></span> <span id="footer-name"></span>. Dibuat dengan HTML, CSS &amp; JavaScript.</footer>
+    </section>
+  </main>
+
+  <button class="admin-trigger" id="admin-trigger" type="button">Admin karya</button>
+
+  <!-- ============ MODAL / LIGHTBOX ============ -->
+  <dialog id="modal" aria-label="Detail">
+    <button class="modal-close" id="modal-close" aria-label="Tutup"></button>
+    <div id="modal-body"></div>
+  </dialog>
+
+  <dialog id="admin-modal" aria-labelledby="admin-title">
+    <button class="modal-close" id="admin-close" aria-label="Tutup"></button>
+    <div class="admin-panel">
+      <section id="admin-login">
+        <p class="admin-kicker">Pengelola portofolio</p>
+        <h2 id="admin-title">Masuk admin</h2>
+        <p class="muted">Masuk dengan akun Supabase untuk mengubah karya yang dilihat semua pengunjung.</p>
+        <form id="admin-login-form" class="admin-form">
+          <label class="lbl">Email<input class="plain" id="admin-email" type="email" required autocomplete="email"></label>
+          <label class="lbl">Password<input class="plain" id="admin-password" type="password" required autocomplete="current-password"></label>
+          <button class="btn" type="submit">Masuk</button>
+          <p class="admin-status" id="admin-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+      <section id="admin-dashboard" hidden>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+          <div>
+            <p class="admin-kicker">Halo, <span id="admin-username-display" style="font-weight:600; color:var(--brand,#3b82f6);">-</span></p>
+            <h2 style="margin:0;">Kelola Karya</h2>
+          </div>
+          <button type="button" id="admin-logout" class="btn sm" style="padding: 6px 14px; font-size: 13px; background: transparent; border: 1px solid currentColor; color: inherit;">Keluar</button>
+        </div>
+        <p class="muted">Upload gambar karya (JPG/PNG/WebP/GIF). Karya akan langsung tampil di halaman portofolio.</p>
+        <form id="admin-work-form" class="admin-form">
+          <label class="lbl">Judul karya<input class="plain" name="title" type="text" maxlength="80" required></label>
+          <label class="lbl">Deskripsi singkat<textarea class="plain" name="desc" rows="3" maxlength="300" required></textarea></label>
+          <div class="admin-grid">
+            <label class="lbl">Kategori<select class="plain" name="category"><option value="projects">Projects</option><option value="certificates">Certificates</option><option value="awards">Awards</option></select></label>
+            <label class="lbl">Tags<input class="plain" name="tags" type="text" maxlength="100" placeholder="Illustration, Canva"></label>
+          </div>
+          <label class="lbl">Gambar karya<input class="plain admin-file" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required></label>
+          <label class="lbl">Link karya, opsional<input class="plain" name="demo" type="url" maxlength="500" placeholder="https://..."></label>
+          <button class="btn" type="submit">Simpan karya</button>
+          <p class="admin-status" id="admin-save-status" role="status" aria-live="polite"></p>
+        </form>
+        <div class="admin-list-wrap"><h3>Karya online</h3><ul class="admin-list" id="admin-work-list"></ul></div>
+      </section>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
